@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude × Outlook</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--accent:#4f8ef7;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--text:#e8e8f0;--muted:#6b6b80;--mono:'DM Mono',monospace;--serif:'Instrument Serif',serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 80% 50% at 20% 20%,rgba(79,142,247,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(124,58,237,.06) 0%,transparent 60%)}
+.app{position:relative;z-index:1;display:flex;height:100vh}
+.sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-header{padding:24px 20px 20px;border-bottom:1px solid var(--border)}
+.logo{font-family:var(--serif);font-style:italic;font-size:22px;margin-bottom:4px}.logo span{color:var(--accent)}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.acct-switcher{margin:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.acct-btn{width:100%;padding:10px 14px;display:flex;align-items:center;gap:10px;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;cursor:pointer;transition:background .15s}
+.acct-btn:last-child{border-bottom:none}.acct-btn:hover{background:rgba(255,255,255,.04)}.acct-btn.active{background:rgba(79,142,247,.1)}
+.acct-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.acct-info{text-align:left;flex:1;overflow:hidden}
+.acct-name{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct-email{color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{background:var(--accent);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;flex-shrink:0}
+nav{flex:1;padding:8px 0;overflow-y:auto}
+.nav-sec{padding:12px 20px 4px;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 20px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(79,142,247,.08)}
+.nav-ct{margin-left:auto;font-size:10px}
+.sidebar-foot{padding:16px;border-top:1px solid var(--border)}
+.status{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted)}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}.s-dot.live{background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;background:rgba(18,18,26,.8);backdrop-filter:blur(10px)}
+.topbar-title{font-family:var(--serif);font-style:italic;font-size:20px;flex:1}
+.topbar-actions{display:flex;gap:8px}
+.btn{padding:7px 14px;border-radius:6px;border:1px solid var(--border);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-g{background:none;color:var(--muted)}.btn-g:hover{color:var(--text);border-color:var(--muted)}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{background:#3b7de8}
+.btn:disabled{opacity:.5;pointer-events:none}
+.content{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.login-wrap{display:flex;align-items:center;justify-content:center;flex:1;padding:40px}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;max-width:460px;width:100%;text-align:center}
+.login-icon{font-size:52px;margin-bottom:20px}
+.login-title{font-family:var(--serif);font-style:italic;font-size:30px;margin-bottom:8px}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:32px;line-height:1.7}
+.ms-btn{width:100%;padding:14px 20px;background:#0078d4;color:#fff;border:none;border-radius:8px;font-family:var(--mono);font-size:13px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.ms-btn:hover{background:#006cbe;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,120,212,.3)}.ms-btn:disabled{opacity:.5;pointer-events:none}
+.login-err{color:var(--red);font-size:11px;margin-top:12px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;transition:border-color .2s}.stat:hover{border-color:var(--accent)}
+.stat-lbl{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.stat-val{font-size:28px;font-family:var(--serif);line-height:1;margin-bottom:4px}.stat-sub{font-size:10px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.panel-title{font-size:12px;flex:1;letter-spacing:.5px}.panel-act{font-size:10px;color:var(--accent);cursor:pointer}.panel-act:hover{text-decoration:underline}
+.email-list{max-height:420px;overflow-y:auto}
+.email-item{padding:14px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;display:flex;gap:14px;align-items:flex-start}
+.email-item:last-child{border-bottom:none}.email-item:hover{background:rgba(255,255,255,.03)}.email-item.unread{background:rgba(79,142,247,.05)}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:2px}
+.e-body{flex:1;min-width:0}.e-meta{display:flex;justify-content:space-between;margin-bottom:3px}
+.e-from{font-size:11px}.e-time{font-size:10px;color:var(--muted);flex-shrink:0}
+.e-subject{font-size:12px;color:var(--muted);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.e-preview{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.7}
+.e-tags{display:flex;gap:4px;margin-top:5px}.tag{font-size:9px;padding:2px 6px;border-radius:4px}
+.tag-b{background:rgba(79,142,247,.15);color:var(--accent)}.tag-a{background:rgba(245,158,11,.15);color:var(--amber)}
+.compose-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.c-lbl{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+.c-sub{font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
+.field input,.field textarea{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--text);transition:border-color .15s}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted)}
+.field textarea{resize:none;min-height:80px}
+.c-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.response{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:12px;line-height:1.7;white-space:pre-wrap;min-height:80px;display:none;margin-top:10px}
+.response.on{display:block}
+.cal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:16px}
+.cal-ev{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;transition:transform .15s}
+.cal-ev:hover{transform:translateY(-1px)}.cal-ev.g{border-left-color:var(--green)}.cal-ev.a{border-left-color:var(--amber)}.cal-ev.p{border-left-color:#a78bfa}
+.cal-time{font-size:10px;color:var(--muted);margin-bottom:3px}.cal-title{font-size:12px;margin-bottom:3px}.cal-loc{font-size:10px;color:var(--muted)}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.spin.on{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:12px}
+.err-txt{color:var(--red)}.hidden{display:none!important}
+.fade{animation:fadeIn .35s ease forwards}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Claude <span>×</span> Outlook</div>
+      <div class="logo-sub">Email Intelligence</div>
+    </div>
+    <div class="acct-switcher">
+      <button class="acct-btn active" id="acct-cheeki">
+        <div class="acct-dot" style="background:#4f8ef7"></div>
+        <div class="acct-info"><div class="acct-name">Cheeki Snacking</div><div class="acct-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e9998c9d8cc79a80878a8588809ba98a818c8c82809a87888a8280878ec78a8684">[email&#160;protected]</a></div></div>
+        <span class="badge hidden" id="badge-c">0</span>
+      </button>
+      <button class="acct-btn" id="acct-tyremax">
+        <div class="acct-dot" style="background:#7c3aed"></div>
+        <div class="acct-info"><div class="acct-name">Tyre Max Group</div><div class="acct-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9cecf9e8f9eeb2eff5f2fff0fdf5eedce8e5eef9f1fde4fbeef3e9ecb2fff3f1">[email&#160;protected]</a></div></div>
+        <span class="badge hidden" id="badge-t">0</span>
+      </button>
+    </div>
+    <nav>
+      <div class="nav-sec">Mailbox</div>
+      <div class="nav-item" id="ni-inbox" onclick="App.setView('inbox')"><span>📥</span>Inbox<span class="nav-ct" id="nc-inbox"></span></div>
+      <div class="nav-item" id="ni-sent" onclick="App.setView('sent')"><span>📤</span>Sent</div>
+      <div class="nav-sec">Tools</div>
+      <div class="nav-item" id="ni-compose" onclick="App.setView('compose')"><span>✍️</span>AI Compose</div>
+      <div class="nav-item" id="ni-calendar" onclick="App.setView('calendar')"><span>📅</span>Calendar</div>
+      <div class="nav-item" id="ni-summarise" onclick="App.setView('summarise')"><span>🧠</span>AI Summarise</div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="status"><div class="s-dot" id="s-dot"></div><span id="s-txt">Not signed in</span></div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Welcome</div>
+      <div class="topbar-actions">
+        <button class="btn btn-g hidden" id="btn-refresh" onclick="App.refresh()">↻ Refresh</button>
+        <button class="btn btn-g hidden" id="btn-signout" onclick="App.signOut()">Sign out</button>
+        <button class="btn btn-p hidden" id="btn-compose" onclick="App.setView('compose')">+ Compose</button>
+      </div>
+    </div>
+    <div class="content">
+      <!-- Login -->
+      <div id="v-login" class="login-wrap fade">
+        <div class="login-card">
+          <div class="login-icon">📬</div>
+          <div class="login-title">Claude × Outlook</div>
+          <div class="login-sub">Sign in with Microsoft to connect your inbox and let Claude manage your emails intelligently.</div>
+          <button class="ms-btn" id="login-btn" onclick="App.signIn()">
+            <span id="login-spin" class="spin"></span>
+            <svg width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+            Sign in with Microsoft
+          </button>
+          <div class="login-err" id="login-err"></div>
+        </div>
+      </div>
+      <!-- Inbox -->
+      <div id="v-inbox" class="hidden fade">
+        <div class="stats">
+          <div class="stat"><div class="stat-lbl">Unread</div><div class="stat-val" id="sv-unread" style="color:var(--accent)">—</div><div class="stat-sub">in inbox</div></div>
+          <div class="stat"><div class="stat-lbl">Total</div><div class="stat-val" id="sv-total">—</div><div class="stat-sub">messages</div></div>
+          <div class="stat"><div class="stat-lbl">Today</div><div class="stat-val" id="sv-today" style="color:var(--green)">—</div><div class="stat-sub">received</div></div>
+          <div class="stat"><div class="stat-lbl">Account</div><div class="stat-val" id="sv-name" style="font-size:14px;margin-top:6px">—</div><div class="stat-sub" id="sv-email"></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Inbox</div><span class="panel-act" onclick="App.loadInbox()">↻ Refresh</span></div>
+          <div class="email-list" id="el-inbox"><div class="empty">Loading...</div></div>
+        </div>
+      </div>
+      <!-- Sent -->
+      <div id="v-sent" class="hidden fade">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Sent Items</div><span class="panel-act" onclick="App.loadSent()">↻ Refresh</span></div>
+          <div class="email-list" id="el-sent"><div class="empty">Loading...</div></div>
+        </div>
+      </div>
+      <!-- Compose -->
+      <div id="v-compose" class="hidden fade">
+        <div class="compose-card">
+          <div class="c-lbl">AI Email Composer</div>
+          <div class="c-sub">Describe what you want to say — Claude drafts it, you send it directly from Outlook.</div>
+          <div class="field"><label>To</label><input type="text" id="c-to" placeholder="recipient@example.com"></div>
+          <div class="field"><label>Subject</label><input type="text" id="c-subject" placeholder="Email subject..."></div>
+          <div class="field"><label>What do you want to say?</label><textarea id="c-prompt" placeholder="e.g. Chase up the tyre delivery, ask for an ETA..."></textarea></div>
+          <div id="c-response" class="response"></div>
+          <div class="c-actions">
+            <button class="btn btn-g" onclick="App.clearCompose()">Clear</button>
+            <button class="btn btn-p" id="c-draft-btn" onclick="App.draftEmail()"><span id="c-spin" class="spin"></span><span>✨ Draft with AI</span></button>
+            <button class="btn btn-p hidden" id="c-send-btn" onclick="App.sendDraft()" style="background:var(--green);border-color:var(--green)">📤 Send</button>
+          </div>
+        </div>
+      </div>
+      <!-- Calendar -->
+      <div id="v-calendar" class="hidden fade">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Upcoming Events — Next 7 Days</div><span class="panel-act" onclick="App.loadCalendar()">↻ Refresh</span></div>
+          <div id="cal-content" class="cal-grid"><div class="empty" style="grid-column:span 2">Loading...</div></div>
+        </div>
+      </div>
+      <!-- Summarise -->
+      <div id="v-summarise" class="hidden fade">
+        <div class="compose-card">
+          <div class="c-lbl">AI Email Intelligence</div>
+          <div class="c-sub">Ask anything about your inbox — Claude fetches and analyses your emails in real time.</div>
+          <div class="field"><label>Your question</label><textarea id="ai-q" placeholder="e.g. What needs urgent attention? Summarise unread emails..."></textarea></div>
+          <div id="ai-resp" class="response"></div>
+          <div class="c-actions">
+            <button class="btn btn-p" onclick="App.analyseEmails()"><span id="ai-spin" class="spin"></span><span>🧠 Analyse</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script>
+const App = (function() {
+  const CLIENT_ID = '29a132c7-c99c-4323-99a7-fcf7c113dfca';
+  const TENANT_ID = 'c169c025-98c8-4cbb-b1c7-8f3109e859e5';
+  const REDIRECT_URI = 'https://petesinclair-design.github.io/outlook-integration';
+  const SCOPES = ['User.Read','Mail.Read','Mail.ReadWrite','Mail.Send','Calendars.ReadWrite','offline_access'];
+  const COLORS = ['#4f8ef7','#22c55e','#f59e0b','#ef4444','#a78bfa','#06b6d4','#ec4899'];
+
+  let msalApp, userAccount, inboxEmails = [], draftedEmail = null, currentView = 'login';
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    try {
+      msalApp = new msal.PublicClientApplication({
+        auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/' + TENANT_ID, redirectUri: REDIRECT_URI },
+        cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
+      });
+      await msalApp.initialize();
+      const resp = await msalApp.handleRedirectPromise();
+      if (resp && resp.account) { userAccount = resp.account; onSignedIn(); return; }
+      const accounts = msalApp.getAllAccounts();
+      if (accounts.length > 0) { userAccount = accounts[0]; onSignedIn(); }
+      else setView('login');
+    } catch(e) {
+      showErr('Init error: ' + e.message);
+      setView('login');
+    }
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById('login-err');
+    if (el) el.textContent = '❌ ' + msg;
+    console.error(msg);
+  }
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  async function signIn() {
+    const btn = document.getElementById('login-btn');
+    const spin = document.getElementById('login-spin');
+    if (!msalApp) { showErr('App not initialised yet, please wait a moment and try again.'); return; }
+    btn.disabled = true; spin.classList.add('on');
+    try {
+      await msalApp.loginRedirect({ scopes: SCOPES });
+    } catch(e) {
+      btn.disabled = false; spin.classList.remove('on');
+      showErr(e.message);
+    }
+  }
+
+  async function signOut() {
+    try { await msalApp.logoutRedirect(); } catch(e) { console.error(e); }
+  }
+
+  async function getToken() {
+    try {
+      const res = await msalApp.acquireTokenSilent({ scopes: SCOPES, account: userAccount });
+      return res.accessToken;
+    } catch(e) {
+      const res = await msalApp.acquireTokenRedirect({ scopes: SCOPES });
+      return res ? res.accessToken : null;
+    }
+  }
+
+  function onSignedIn() {
+    const name = userAccount.name || userAccount.username;
+    document.getElementById('sv-name').textContent = name.split(' ')[0];
+    document.getElementById('sv-email').textContent = userAccount.username;
+    document.getElementById('s-dot').classList.add('live');
+    document.getElementById('s-txt').textContent = name.split(' ')[0];
+    ['btn-refresh','btn-signout','btn-compose'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+    setView('inbox');
+    loadInbox();
+    loadCalendar();
+  }
+
+  // ── Graph ─────────────────────────────────────────────────────────────────
+  async function graphGet(path) {
+    const token = await getToken();
+    const r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token } });
+    if (!r.ok) throw new Error('Graph ' + r.status + ': ' + (await r.text()).substring(0,120));
+    return r.json();
+  }
+
+  async function graphPost(path, body) {
+    const token = await getToken();
+    const r = await fetch('https://graph.microsoft.com/v1.0' + path, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok && r.status !== 202) throw new Error('Graph ' + r.status);
+    return { ok: true };
+  }
+
+  // ── Inbox ─────────────────────────────────────────────────────────────────
+  async function loadInbox() {
+    document.getElementById('el-inbox').innerHTML = '<div class="empty">⟳ Loading emails...</div>';
+    try {
+      const d = await graphGet('/me/mailFolders/inbox/messages?$top=25&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,isRead,bodyPreview,importance,id');
+      inboxEmails = d.value || [];
+      const unread = inboxEmails.filter(e => !e.isRead).length;
+      const today = inboxEmails.filter(e => new Date(e.receivedDateTime).toDateString() === new Date().toDateString()).length;
+      document.getElementById('sv-unread').textContent = unread;
+      document.getElementById('sv-total').textContent = inboxEmails.length;
+      document.getElementById('sv-today').textContent = today;
+      document.getElementById('nc-inbox').textContent = unread || '';
+      if (unread) { document.getElementById('badge-c').textContent = unread; document.getElementById('badge-c').classList.remove('hidden'); }
+      renderEmails(inboxEmails, 'el-inbox', false);
+    } catch(e) {
+      document.getElementById('el-inbox').innerHTML = '<div class="empty err-txt">❌ ' + e.message + '</div>';
+    }
+  }
+
+  async function loadSent() {
+    document.getElementById('el-sent').innerHTML = '<div class="empty">⟳ Loading...</div>';
+    try {
+      const d = await graphGet('/me/mailFolders/sentitems/messages?$top=20&$orderby=sentDateTime desc&$select=subject,toRecipients,sentDateTime,bodyPreview,id');
+      renderEmails(d.value || [], 'el-sent', true);
+    } catch(e) {
+      document.getElementById('el-sent').innerHTML = '<div class="empty err-txt">❌ ' + e.message + '</div>';
+    }
+  }
+
+  function renderEmails(emails, containerId, sent) {
+    const el = document.getElementById(containerId);
+    if (!emails.length) { el.innerHTML = '<div class="empty">No emails found</div>'; return; }
+    el.innerHTML = emails.map(function(e, i) {
+      const name = sent
+        ? ((e.toRecipients && e.toRecipients[0] && e.toRecipients[0].emailAddress && e.toRecipients[0].emailAddress.name) || 'Unknown')
+        : ((e.from && e.from.emailAddress && e.from.emailAddress.name) || 'Unknown');
+      const initials = name.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+      const col = COLORS[i % COLORS.length];
+      const time = fmtTime(e.receivedDateTime || e.sentDateTime);
+      const unread = !sent && !e.isRead;
+      const urgent = e.importance === 'high' ? '<span class="tag tag-a">URGENT</span>' : '';
+      return '<div class="email-item ' + (unread ? 'unread' : '') + '" onclick="App.clickEmail(' + i + ')">' +
+        '<div class="avatar" style="background:' + col + '22;color:' + col + '">' + initials + '</div>' +
+        '<div class="e-body">' +
+          '<div class="e-meta"><span class="e-from">' + name + '</span><span class="e-time">' + time + '</span></div>' +
+          '<div class="e-subject">' + (e.subject || '(No subject)') + '</div>' +
+          '<div class="e-preview">' + (e.bodyPreview || '') + '</div>' +
+          '<div class="e-tags">' + urgent + (unread ? '<span class="tag tag-b">UNREAD</span>' : '') + '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function clickEmail(i) {
+    const e = inboxEmails[i]; if (!e) return;
+    document.getElementById('c-to').value = (e.from && e.from.emailAddress && e.from.emailAddress.address) || '';
+    document.getElementById('c-subject').value = 'Re: ' + (e.subject || '');
+    document.getElementById('c-prompt').value = 'Reply to email from ' + ((e.from && e.from.emailAddress && e.from.emailAddress.name) || '') + '.\nPreview: ' + (e.bodyPreview || '');
+    setView('compose');
+  }
+
+  function fmtTime(d) {
+    if (!d) return '';
+    const dt = new Date(d), diff = Date.now() - dt;
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    return dt.toLocaleDateString([], {day:'numeric',month:'short'});
+  }
+
+  // ── Calendar ──────────────────────────────────────────────────────────────
+  async function loadCalendar() {
+    try {
+      const now = new Date().toISOString(), end = new Date(Date.now() + 7*864e5).toISOString();
+      const d = await graphGet('/me/calendarView?startDateTime=' + now + '&endDateTime=' + end + '&$top=12&$orderby=start/dateTime&$select=subject,start,end,location');
+      const events = d.value || [];
+      const grid = document.getElementById('cal-content');
+      if (!events.length) { grid.innerHTML = '<div class="empty" style="grid-column:span 2">No upcoming events</div>'; return; }
+      const cls = ['','g','a','p'];
+      grid.innerHTML = events.map(function(e, i) {
+        const s = new Date((e.start && e.start.dateTime) || (e.start && e.start.date));
+        const t = s.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'}) + ' · ' + s.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        return '<div class="cal-ev ' + cls[i%4] + '"><div class="cal-time">' + t + '</div><div class="cal-title">' + (e.subject || 'Untitled') + '</div>' +
+          ((e.location && e.location.displayName) ? '<div class="cal-loc">📍 ' + e.location.displayName + '</div>' : '') + '</div>';
+      }).join('');
+    } catch(e) {
+      document.getElementById('cal-content').innerHTML = '<div class="empty err-txt" style="grid-column:span 2">❌ ' + e.message + '</div>';
+    }
+  }
+
+  // ── AI Compose ────────────────────────────────────────────────────────────
+  async function draftEmail() {
+    const prompt = document.getElementById('c-prompt').value.trim();
+    if (!prompt) return;
+    const to = document.getElementById('c-to').value.trim();
+    const subject = document.getElementById('c-subject').value.trim();
+    const btn = document.getElementById('c-draft-btn'), spin = document.getElementById('c-spin');
+    const resp = document.getElementById('c-response');
+    btn.disabled = true; spin.classList.add('on'); resp.classList.add('on'); resp.textContent = 'Drafting...';
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+          messages: [{ role: 'user', content: 'Draft a professional email.\nTo: ' + (to||'recipient') + '\nSubject: ' + (subject||'TBD') + '\nInstructions: ' + prompt + '\n\nStart with "Subject: ..." then write the body. Natural, concise tone.' }]
+        })
+      });
+      const data = await r.json();
+      const text = (data.content && data.content[0] && data.content[0].text) || 'Could not generate.';
+      resp.textContent = text;
+      const sm = text.match(/Subject:\s*(.+)/);
+      draftedEmail = { to: to, subject: subject || (sm ? sm[1].trim() : 'Email'), body: text.replace(/Subject:.+\n?/, '').trim() };
+      document.getElementById('c-send-btn').classList.remove('hidden');
+    } catch(e) { resp.textContent = 'Error: ' + e.message; }
+    btn.disabled = false; spin.classList.remove('on');
+  }
+
+  async function sendDraft() {
+    if (!draftedEmail) return;
+    const btn = document.getElementById('c-send-btn');
+    btn.textContent = '⟳ Sending...'; btn.disabled = true;
+    try {
+      await graphPost('/me/sendMail', {
+        message: { subject: draftedEmail.subject,
+          body: { contentType: 'HTML', content: draftedEmail.body.replace(/\n/g, '<br>') },
+          toRecipients: [{ emailAddress: { address: draftedEmail.to } }]
+        }
+      });
+      btn.textContent = '✅ Sent!'; btn.style.background = 'var(--green)';
+      setTimeout(function(){ btn.classList.add('hidden'); btn.disabled=false; btn.textContent='📤 Send'; btn.style.background=''; }, 3000);
+    } catch(e) { btn.textContent = '❌ Failed'; btn.disabled = false; }
+  }
+
+  function clearCompose() {
+    ['c-to','c-subject','c-prompt'].forEach(function(id){ document.getElementById(id).value=''; });
+    document.getElementById('c-response').classList.remove('on');
+    document.getElementById('c-send-btn').classList.add('hidden');
+    draftedEmail = null;
+  }
+
+  // ── AI Summarise ──────────────────────────────────────────────────────────
+  async function analyseEmails() {
+    const q = document.getElementById('ai-q').value.trim() || 'Summarise my recent emails and highlight anything urgent.';
+    const resp = document.getElementById('ai-resp'), spin = document.getElementById('ai-spin');
+    spin.classList.add('on'); resp.classList.add('on'); resp.textContent = 'Analysing...';
+    const ctx = inboxEmails.slice(0,15).map(function(e){
+      return 'From: ' + ((e.from && e.from.emailAddress && e.from.emailAddress.name) || '') + ' <' + ((e.from && e.from.emailAddress && e.from.emailAddress.address) || '') + '>\nSubject: ' + e.subject + '\nPreview: ' + e.bodyPreview + '\nRead: ' + e.isRead + '\nTime: ' + e.receivedDateTime;
+    }).join('\n\n---\n\n');
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+          messages: [{ role: 'user', content: "You are Pete Sinclair's email assistant. Recent emails:\n\n" + (ctx||'No emails loaded.') + "\n\nRequest: " + q }]
+        })
+      });
+      const data = await r.json();
+      resp.textContent = (data.content && data.content[0] && data.content[0].text) || 'No response.';
+    } catch(e) { resp.textContent = 'Error: ' + e.message; }
+    spin.classList.remove('on');
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  function setView(v) {
+    ['login','inbox','sent','compose','calendar','summarise'].forEach(function(n){
+      var el = document.getElementById('v-' + n); if (el) el.classList.add('hidden');
+      var ni = document.getElementById('ni-' + n); if (ni) ni.classList.remove('active');
+    });
+    var el = document.getElementById('v-' + v); if (el) el.classList.remove('hidden');
+    var ni = document.getElementById('ni-' + v); if (ni) ni.classList.add('active');
+    var titles = {login:'Welcome',inbox:'Inbox',sent:'Sent',compose:'AI Compose',calendar:'Calendar',summarise:'AI Summarise'};
+    document.getElementById('topbar-title').textContent = titles[v] || v;
+    currentView = v;
+    if (v === 'sent') loadSent();
+    if (v === 'calendar') loadCalendar();
+  }
+
+  function refresh() {
+    if (currentView === 'inbox') loadInbox();
+    else if (currentView === 'sent') loadSent();
+    else if (currentView === 'calendar') loadCalendar();
+  }
+
+  // ── Boot ──────────────────────────────────�
